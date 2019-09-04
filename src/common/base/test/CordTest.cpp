@@ -209,6 +209,50 @@ TEST(Cord, cordStream) {
     EXPECT_EQ(str1 + str2, c1.str());
 }
 
+
+TEST(Cord, Clone) {
+    {
+        Cord cord;
+        folly::StringPiece str("We will rock you");
+        constexpr auto N = 4096UL;
+        for (auto i = 0u; i < N; i++) {
+            cord << str;
+        }
+
+        ASSERT_EQ(N * str.size(), cord.size());
+
+        auto cloned = cord.clone();
+        ASSERT_TRUE(cloned->isShared());
+        ASSERT_TRUE(cloned->isChained());
+
+        auto coalesced = cord.cloneAsOne();
+        ASSERT_FALSE(coalesced->isShared());
+        ASSERT_FALSE(coalesced->isChained());
+        ASSERT_EQ(cord.size(), coalesced->length());
+    }
+    {
+        Cord cord;
+        folly::StringPiece str("We will rock you");
+        constexpr auto N = 4096UL;
+        cord.makeRoomForWrite(N * str.size());
+        for (auto i = 0u; i < N; i++) {
+            cord << str;
+        }
+
+        ASSERT_EQ(N * str.size(), cord.size());
+
+        auto cloned = cord.clone();
+        ASSERT_TRUE(cloned->isShared());
+        ASSERT_FALSE(cloned->isChained());
+        ASSERT_EQ(cord.size(), cloned->length());
+
+        auto coalesced = cord.cloneAsOne();
+        ASSERT_TRUE(coalesced->isShared());
+        ASSERT_FALSE(coalesced->isChained());
+        ASSERT_EQ(cord.size(), coalesced->length());
+    }
+}
+
 }   // namespace nebula
 
 
