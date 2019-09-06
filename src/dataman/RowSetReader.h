@@ -68,7 +68,6 @@ public:
 
 private:
     std::shared_ptr<const meta::SchemaProviderIf> schema_;
-    std::string dataStore_;
     folly::StringPiece data_;
 };
 

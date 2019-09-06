@@ -58,6 +58,20 @@ public:
         return std::move(head_);
     }
 
+    // The caller should guarantee that `header' must not be being shared,
+    // if there are subsequent writes to this Cord.
+    void prependHeader(std::unique_ptr<folly::IOBuf> header) {
+        auto size = header->computeChainDataLength();
+        if (head_ == nullptr) {
+            head_ = std::move(header);
+            size_ = size;
+            return;
+        }
+        header->prependChain(std::move(head_));
+        head_ = std::move(header);
+        size_ += size;
+    }
+
     // Apply each block to the visitor until the end or the visitor
     // returns false
     using Visitor = std::function<bool(const char*, size_t)>;

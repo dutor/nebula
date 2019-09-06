@@ -25,7 +25,7 @@ RowWriter::RowWriter(std::shared_ptr<const SchemaProviderIf> schema)
 
 int64_t RowWriter::size() const noexcept {
     auto offsetBytes = calcOccupiedBytes(cord_.size());
-    SchemaVer verBytes = 0;
+    auto verBytes = 0L;
     if (schema_->getVersion() > 0) {
         verBytes = calcOccupiedBytes(schema_->getVersion());
     }
@@ -47,31 +47,56 @@ std::string RowWriter::encode() noexcept {
 
 
 void RowWriter::encodeTo(std::string& encoded) noexcept {
+    if (!encoded_) {
+        encodeToIOBuf();
+    }
+    cord_.appendTo(encoded);
+}
+
+
+std::unique_ptr<folly::IOBuf> RowWriter::encodeToIOBuf() {
+    if (encoded_) {
+        return cord_.clone();
+    }
+
     if (!schemaWriter_) {
         operator<<(Skip(schema_->getNumFields() - colNum_));
     }
 
-    // Header information
+    constexpr auto maxRowLenBytes = 10UL;
+    auto version = schema_->getVersion();
     auto offsetBytes = calcOccupiedBytes(cord_.size());
+    auto verBytes = calcOccupiedBytes(version);
+    auto headerBytes = offsetBytes * blockOffsets_.size() + verBytes + 1;
     char header = offsetBytes - 1;
 
-    SchemaVer ver = schema_->getVersion();
-    if (ver > 0) {
-        auto verBytes = calcOccupiedBytes(ver);
+    auto hbuffer = folly::IOBuf::create(headerBytes + maxRowLenBytes);
+    hbuffer->advance(maxRowLenBytes);
+    auto *tail = hbuffer->writableTail();
+
+    if (version > 0) {
         header |= verBytes << 5;
-        encoded.append(&header, 1);
-        // Schema version is stored in Little Endian
-        encoded.append(reinterpret_cast<char*>(&ver), verBytes);
+        ::memcpy(tail, &header, 1);
+        tail += 1;
+        ::memcpy(tail, &version, verBytes);
+        tail += verBytes;
     } else {
-        encoded.append(&header, 1);
+        ::memcpy(tail, &header, 1);
+        tail += 1;
+        headerBytes -= verBytes;
     }
 
-    // Offsets are stored in Little Endian
     for (auto offset : blockOffsets_) {
-        encoded.append(reinterpret_cast<char*>(&offset), offsetBytes);
+        ::memcpy(tail, &offset, offsetBytes);
+        tail += offsetBytes;
     }
 
-    cord_.appendTo(encoded);
+    hbuffer->append(headerBytes);
+    cord_.prependHeader(std::move(hbuffer));
+
+    encoded_ = true;
+
+    return cord_.clone();
 }
 
 
@@ -85,13 +110,8 @@ Schema RowWriter::moveSchema() {
 
 
 int64_t RowWriter::calcOccupiedBytes(uint64_t v) const noexcept {
-    int64_t bytes = 0;
-    do {
-        bytes++;
-        v >>= 8;
-    } while (v);
-
-    return bytes;
+    if (v == 0) return 1;
+    return 8 - __builtin_clzl(v) / 8;
 }
 
 

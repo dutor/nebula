@@ -773,7 +773,7 @@ void GoExecutor::onEmptyInputs() {
 
 
 bool GoExecutor::processFinalResult(RpcResponse &rpcResp, Callback cb) const {
-    auto all = rpcResp.responses();
+    auto &all = rpcResp.responses();
     auto spaceId = ectx()->rctx()->session()->space();
     for (auto &resp : all) {
         if (resp.get_vertices() == nullptr) {

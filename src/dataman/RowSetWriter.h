@@ -37,18 +37,34 @@ public:
         return data_;
     }
 
+    std::unique_ptr<folly::IOBuf> clone() const {
+        DCHECK(!head_);
+        return head_->clone();
+    }
+
+    std::unique_ptr<folly::IOBuf> move() {
+        return std::move(head_);
+    }
+
     // Both schemas have to be same
     void addRow(RowWriter& writer);
+    void addRow(RowWriter&& writer);
+    void addRow(std::unique_ptr<folly::IOBuf> row);
     // Append the encoded row data
     void addRow(const std::string& data);
     // Copy existed rows
     void addAll(const std::string& data);
+    void addAll(std::unique_ptr<folly::IOBuf> rows);
+
+private:
+    void writeRowLength(int64_t len);
+    void writeRowLength(folly::IOBuf *buf);
 
 private:
     std::shared_ptr<const meta::SchemaProviderIf> schema_;
     std::string data_;
 
-    void writeRowLength(int64_t len);
+    std::unique_ptr<folly::IOBuf> head_;
 };
 
 }  // namespace nebula

@@ -75,6 +75,14 @@ public:
     // is large enough so that resize will not happen
     void encodeTo(std::string& encoded) noexcept;
 
+    std::unique_ptr<folly::IOBuf> encodeToIOBuf();
+    std::unique_ptr<folly::IOBuf> move() {
+        if (!encoded_) {
+            encodeToIOBuf();
+        }
+        return cord_.move();
+    }
+
     // Calculate the exact length of the encoded binary array
     int64_t size() const noexcept;
 
@@ -107,6 +115,7 @@ public:
 private:
     std::shared_ptr<const meta::SchemaProviderIf> schema_;
     std::shared_ptr<SchemaWriter> schemaWriter_;
+    bool encoded_{false};
     Cord cord_;
 
     int64_t colNum_ = 0;

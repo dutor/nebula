@@ -27,9 +27,42 @@ void RowSetWriter::writeRowLength(int64_t len) {
 }
 
 
+void RowSetWriter::writeRowLength(folly::IOBuf *buf) {
+    auto len = buf->computeChainDataLength();
+    uint8_t bytes[10];
+    len = folly::encodeVarint(len, bytes);
+    DCHECK_GE(buf->headroom(), len);
+    buf->prepend(len);
+    auto *beg = buf->writableData();
+    ::memcpy(beg, bytes, len);
+}
+
+
 void RowSetWriter::addRow(RowWriter& writer) {
     writeRowLength(writer.size());
     writer.encodeTo(data_);
+}
+
+
+void RowSetWriter::addRow(RowWriter &&writer) {
+    auto row = writer.move();
+    writeRowLength(row.get());
+    if (!head_) {
+        head_ = std::move(row);
+        return;
+    }
+    head_->prependChain(std::move(row));
+}
+
+
+void RowSetWriter::addRow(std::unique_ptr<folly::IOBuf> row) {
+    DCHECK(!row->isShared());
+    writeRowLength(row.get());
+    if (!head_) {
+        head_ = std::move(row);
+        return;
+    }
+    head_->prependChain(std::move(row));
 }
 
 
@@ -41,5 +74,15 @@ void RowSetWriter::addRow(const std::string& data) {
 void RowSetWriter::addAll(const std::string& data) {
     data_.append(data);
 }
+
+
+void RowSetWriter::addAll(std::unique_ptr<folly::IOBuf> rows) {
+    if (!head_) {
+        head_ = std::move(rows);
+        return;
+    }
+    head_->prependChain(std::move(rows));
+}
+
 }  // namespace nebula
 
