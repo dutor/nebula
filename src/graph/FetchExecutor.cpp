@@ -51,7 +51,7 @@ Status FetchExecutor::prepareYield() {
     }
 
     auto aliasProps = expCtx_->aliasProps();
-    for (auto pair : aliasProps) {
+    for (auto &pair : aliasProps) {
         if (pair.first != *labelName_) {
             return Status::SyntaxError(
                 "[%s.%s] tag not declared in %s.",

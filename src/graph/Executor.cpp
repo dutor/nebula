@@ -165,7 +165,7 @@ std::unique_ptr<Executor> Executor::makeExecutor(Sentence *sentence) {
     return executor;
 }
 
-std::string Executor::valueTypeToString(nebula::cpp2::ValueType type) {
+std::string Executor::valueTypeToString(const nebula::cpp2::ValueType &type) {
     switch (type.type) {
         case nebula::cpp2::SupportedType::BOOL:
             return "bool";
@@ -219,8 +219,8 @@ bool Executor::checkValueType(const nebula::cpp2::ValueType &type, const Variant
     return false;
 }
 
-Status Executor::checkFieldName(std::shared_ptr<const meta::SchemaProviderIf> schema,
-                                std::vector<std::string*> props) {
+Status Executor::checkFieldName(const meta::SchemaProviderIf *schema,
+                                const std::vector<std::string*> &props) {
     for (auto fieldIndex = 0u; fieldIndex < schema->getNumFields(); fieldIndex++) {
         auto schemaFieldName = schema->getFieldName(fieldIndex);
         if (UNLIKELY(nullptr == schemaFieldName)) {

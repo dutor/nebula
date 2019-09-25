@@ -67,7 +67,7 @@ Status InsertVertexExecutor::check() {
         tagProps_.emplace_back(props);
 
         // Check field name
-        auto checkStatus = checkFieldName(schema, props);
+        auto checkStatus = checkFieldName(schema.get(), props);
         if (!checkStatus.ok()) {
             return checkStatus;
         }

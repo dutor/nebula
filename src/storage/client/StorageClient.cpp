@@ -37,7 +37,7 @@ folly::SemiFuture<StorageRpcResponse<cpp2::ExecResponse>> StorageClient::addVert
         folly::EventBase* evb) {
     auto clusters = clusterIdsToHosts(
         space,
-        vertices,
+        std::move(vertices),
         [] (const cpp2::Vertex& v) {
             return v.get_id();
         });
@@ -68,7 +68,7 @@ folly::SemiFuture<StorageRpcResponse<cpp2::ExecResponse>> StorageClient::addEdge
         folly::EventBase* evb) {
     auto clusters = clusterIdsToHosts(
         space,
-        edges,
+        std::move(edges),
         [] (const cpp2::Edge& e) {
             return e.get_key().get_src();
         });
@@ -112,8 +112,8 @@ folly::SemiFuture<StorageRpcResponse<cpp2::QueryResponse>> StorageClient::getNei
         req.set_space_id(space);
         req.set_parts(std::move(c.second));
         req.set_edge_types(edgeTypes);
-        req.set_filter(filter);
-        req.set_return_columns(returnCols);
+        req.set_filter(std::move(filter));
+        req.set_return_columns(std::move(returnCols));
     }
 
     return collectResponse(
@@ -145,9 +145,9 @@ folly::SemiFuture<StorageRpcResponse<cpp2::QueryStatsResponse>> StorageClient::n
         req.set_space_id(space);
         req.set_parts(std::move(c.second));
         // Make edge type a negative number when query in-bound
-        req.set_edge_types(edgeTypes);
-        req.set_filter(filter);
-        req.set_return_columns(returnCols);
+        req.set_edge_types(std::move(edgeTypes));
+        req.set_filter(std::move(filter));
+        req.set_return_columns(std::move(returnCols));
     }
 
     return collectResponse(
@@ -165,7 +165,7 @@ folly::SemiFuture<StorageRpcResponse<cpp2::QueryResponse>> StorageClient::getVer
         folly::EventBase* evb) {
     auto clusters = clusterIdsToHosts(
         space,
-        vertices,
+        std::move(vertices),
         [] (const VertexID& v) {
             return v;
         });
@@ -176,7 +176,7 @@ folly::SemiFuture<StorageRpcResponse<cpp2::QueryResponse>> StorageClient::getVer
         auto& req = requests[host];
         req.set_space_id(space);
         req.set_parts(std::move(c.second));
-        req.set_return_columns(returnCols);
+        req.set_return_columns(std::move(returnCols));
     }
 
     return collectResponse(
@@ -195,7 +195,7 @@ folly::SemiFuture<StorageRpcResponse<cpp2::EdgePropResponse>> StorageClient::get
         folly::EventBase* evb) {
     auto clusters = clusterIdsToHosts(
         space,
-        edges,
+        std::move(edges),
         [] (const cpp2::EdgeKey& v) {
             return v.get_src();
         });
@@ -210,7 +210,7 @@ folly::SemiFuture<StorageRpcResponse<cpp2::EdgePropResponse>> StorageClient::get
             break;
         }
         req.set_parts(std::move(c.second));
-        req.set_return_columns(returnCols);
+        req.set_return_columns(std::move(returnCols));
     }
 
     return collectResponse(
@@ -230,7 +230,7 @@ folly::Future<StatusOr<cpp2::EdgeKeyResponse>> StorageClient::getEdgeKeys(
     PartitionID part = partId(space, vid);
     auto partMeta = getPartMeta(space, part);
     CHECK_GT(partMeta.peers_.size(), 0U);
-    const auto& leader = this->leader(partMeta);
+    auto leader = this->leader(partMeta);
     request.first = leader;
 
     cpp2::EdgeKeyRequest req;
@@ -255,7 +255,7 @@ folly::SemiFuture<StorageRpcResponse<cpp2::ExecResponse>> StorageClient::deleteE
     folly::EventBase* evb) {
     auto clusters = clusterIdsToHosts(
         space,
-        edges,
+        std::move(edges),
         [] (const cpp2::EdgeKey& v) {
             return v.get_src();
         });
@@ -285,7 +285,7 @@ folly::Future<StatusOr<cpp2::ExecResponse>> StorageClient::deleteVertex(
     PartitionID part = partId(space, vid);
     auto partMeta = getPartMeta(space, part);
     CHECK_GT(partMeta.peers_.size(), 0U);
-    const auto& leader = this->leader(partMeta);
+    auto leader = this->leader(partMeta);
     request.first = leader;
 
     cpp2::DeleteVertexRequest req;
@@ -316,15 +316,15 @@ folly::Future<StatusOr<storage::cpp2::UpdateResponse>> StorageClient::updateVert
     PartitionID part = this->partId(space, vertexId);
     auto partMeta = this->getPartMeta(space, part);
     CHECK_GT(partMeta.peers_.size(), 0U);
-    const auto& host = this->leader(partMeta);
-    request.first = std::move(host);
+    auto host = this->leader(partMeta);
+    request.first = host;
     cpp2::UpdateVertexRequest req;
     req.set_space_id(space);
     req.set_vertex_id(vertexId);
     req.set_part_id(part);
-    req.set_filter(filter);
+    req.set_filter(std::move(filter));
     req.set_update_items(std::move(updateItems));
-    req.set_return_columns(returnCols);
+    req.set_return_columns(std::move(returnCols));
     req.set_insertable(insertable);
     request.second = std::move(req);
 
@@ -349,15 +349,15 @@ folly::Future<StatusOr<storage::cpp2::UpdateResponse>> StorageClient::updateEdge
     PartitionID part = this->partId(space, edgeKey.get_src());
     auto partMeta = this->getPartMeta(space, part);
     CHECK_GT(partMeta.peers_.size(), 0U);
-    const auto& host = this->leader(partMeta);
-    request.first = std::move(host);
+    auto host = this->leader(partMeta);
+    request.first = host;
     cpp2::UpdateEdgeRequest req;
     req.set_space_id(space);
     req.set_edge_key(edgeKey);
     req.set_part_id(part);
-    req.set_filter(filter);
+    req.set_filter(std::move(filter));
     req.set_update_items(std::move(updateItems));
-    req.set_return_columns(returnCols);
+    req.set_return_columns(std::move(returnCols));
     req.set_insertable(insertable);
     request.second = std::move(req);
 

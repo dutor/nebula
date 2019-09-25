@@ -77,14 +77,14 @@ public:
 protected:
     std::unique_ptr<Executor> makeExecutor(Sentence *sentence);
 
-    std::string valueTypeToString(nebula::cpp2::ValueType type);
+    std::string valueTypeToString(const nebula::cpp2::ValueType &type);
 
     void writeVariantType(RowWriter &writer, const VariantType &value);
 
     bool checkValueType(const nebula::cpp2::ValueType &type, const VariantType &value);
 
-    Status checkFieldName(std::shared_ptr<const meta::SchemaProviderIf> schema,
-                          std::vector<std::string*> props);
+    Status checkFieldName(const meta::SchemaProviderIf *schema,
+                          const std::vector<std::string*> &props);
 
     StatusOr<int64_t> toTimestamp(const VariantType &value);
 

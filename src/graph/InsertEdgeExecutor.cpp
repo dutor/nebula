@@ -56,7 +56,7 @@ Status InsertEdgeExecutor::check() {
         }
 
         // Check field name
-        auto checkStatus = checkFieldName(schema_, props);
+        auto checkStatus = checkFieldName(schema_.get(), props);
         if (!checkStatus.ok()) {
             status = checkStatus;
             break;

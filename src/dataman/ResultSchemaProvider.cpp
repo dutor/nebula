@@ -46,7 +46,7 @@ bool ResultSchemaProvider::ResultSchemaField::isValid() const {
  *
  **********************************/
 ResultSchemaProvider::ResultSchemaProvider(Schema schema)
-        : columns_(std::move(schema.get_columns())) {
+        : columns_(std::move(schema).get_columns()) {
     for (int64_t i = 0; i < static_cast<int64_t>(columns_.size()); i++) {
         const std::string& name = columns_[i].get_name();
         nameIndex_.emplace(std::make_pair(SpookyHashV2::Hash64(name.data(), name.size(), 0), i));
